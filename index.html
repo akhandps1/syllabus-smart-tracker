@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syllabus Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e8f5e9;
+            margin: 0;
+            padding: 20px;
+        }
+        .subject {
+            background-color: #f3e5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .subject h1 {
+            color: #4a148c;
+            margin: 0;
+            cursor: pointer;
+        }
+        .subject-content {
+            display: none;
+            margin-top: 10px;
+        }
+        .subject-content.show {
+            display: block;
+        }
+        .chapter {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .chapter h2 {
+            color: #6a1b9a;
+            margin: 0;
+            cursor: pointer;
+        }
+        .chapter-content {
+            display: none;
+            margin-top: 10px;
+        }
+        .chapter-content.show {
+            display: block;
+        }
+        .topic-list {
+            margin: 10px 0;
+        }
+        .topic-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .topic-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .topic-name {
+            flex-grow: 1;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+        }
+        .topic-name:focus {
+            outline: none;
+            border-bottom: 1px solid #6a1b9a;
+        }
+        .delete-btn {
+            background-color: #ef5350;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .add-topic, .delete-chapter, .add-chapter-btn, .add-topic-btn, .add-subject-btn, .delete-subject-btn {
+            background-color: #6a1b9a;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+        .notes {
+            width: 100%;
+            height: 100px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        .progress {
+            margin-top: 10px;
+        }
+        .progress-bar {
+            width: 100%;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 10px;
+            background-color: #f06292;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .add-subject-container, .add-chapter-container, .add-topic-container {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .add-subject-container input, .add-chapter-container input, .add-topic-container input {
+            margin-right: 10px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="add-subject-container">
+        <input type="text" id="new-subject-name" placeholder="Enter subject name">
+        <button class="add-subject-btn" onclick="addSubject()">Add Subject</button>
+    </div>
+    <div id="tracker"></div>
+
+    <script>
+        // Default data
+        const defaultSubjects = [
+            { 
+                name: "Data Structures", 
+                isOpen: false,
+                chapters: [
+                    { 
+                        name: "Array", 
+                        topics: [
+                            { name: "Find the maximum and minimum element in an array", completed: false },
+                            { name: "Count Inversion", completed: false },
+                            { name: "Reverse the array", completed: false }
+                        ], 
+                        notes: "",
+                        isOpen: false
+                    },
+                    { 
+                        name: "Matrix", 
+                        topics: [
+                            { name: "Matrix basics", completed: false },
+                            { name: "Matrix operations", completed: false }
+                        ], 
+                        notes: "",
+                        isOpen: false
+                    }
+                ]
+            },
+            { 
+                name: "Algorithms", 
+                isOpen: false,
+                chapters: [
+                    { 
+                        name: "String", 
+                        topics: [
+                            { name: "String manipulation", completed: false },
+                            { name: "Pattern matching", completed: false }
+                        ], 
+                        notes: "",
+                        isOpen: false
+                    }
+                ]
+            }
+        ];
+
+        // Load subjects from localStorage or use default
+        let subjects = [];
+        try {
+            const savedData = localStorage.getItem('syllabusTracker');
+            subjects = savedData ? JSON.parse(savedData) : defaultSubjects;
+        } catch (e) {
+            console.error('Error loading from localStorage:', e);
+            subjects = defaultSubjects;
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('syllabusTracker', JSON.stringify(subjects));
+            } catch (e) {
+                console.error('Error saving to localStorage:', e);
+            }
+        }
+
+        function renderTracker() {
+            const tracker = document.getElementById('tracker');
+            tracker.innerHTML = '';
+            subjects.forEach((subject, subjectIndex) => {
+                const subjectDiv = document.createElement('div');
+                subjectDiv.className = 'subject';
+                subjectDiv.innerHTML = `
+                    <h1 onclick="toggleSubject(${subjectIndex})">${subject.name}</h1>
+                    <div id="subject-${subjectIndex}" class="subject-content ${subject.isOpen ? 'show' : ''}">
+                        <div class="add-chapter-container">
+                            <input type="text" id="new-chapter-${subjectIndex}" placeholder="Enter chapter name">
+                            <button class="add-chapter-btn" onclick="addChapter(${subjectIndex})">Add Chapter</button>
+                        </div>
+                        <button class="delete-subject-btn" onclick="deleteSubject(${subjectIndex})">Delete Subject</button>
+                        ${subject.chapters.map((chapter, chapterIndex) => {
+                            const totalTopics = chapter.topics.length;
+                            const completedTopics = chapter.topics.filter(topic => topic.completed).length;
+                            const progress = totalTopics > 0 ? (completedTopics / totalTopics) * 100 : 0;
+                            return `
+                                <div class="chapter">
+                                    <h2 onclick="toggleChapter(${subjectIndex}, ${chapterIndex})">${chapter.name}</h2>
+                                    <div class="progress">Progress: <span>${progress.toFixed(0)}%</span></div>
+                                    <div class="progress-bar"><div class="progress-fill" style="width: ${progress}%"></div></div>
+                                    <div id="chapter-${subjectIndex}-${chapterIndex}" class="chapter-content ${chapter.isOpen ? 'show' : ''}">
+                                        <div class="add-topic-container">
+                                            <input type="text" id="new-topic-${subjectIndex}-${chapterIndex}" placeholder="Enter topic name">
+                                            <button class="add-topic-btn" onclick="addTopic(${subjectIndex}, ${chapterIndex})">Add Topic</button>
+                                        </div>
+                                        <div class="topic-list" id="topics-${subjectIndex}-${chapterIndex}">
+                                            ${chapter.topics.map((topic, topicIndex) => `
+                                                <div class="topic-item">
+                                                    <input type="checkbox" data-subject="${subjectIndex}" data-chapter="${chapterIndex}" data-topic="${topicIndex}" 
+                                                        ${topic.completed ? 'checked' : ''} onchange="updateProgress(${subjectIndex}, ${chapterIndex}, ${topicIndex}, this.checked)">
+                                                    <input type="text" class="topic-name" value="${topic.name}" onblur="updateTopic(${subjectIndex}, ${chapterIndex}, ${topicIndex}, this.value)">
+                                                    <button class="delete-btn" onclick="deleteTopic(${subjectIndex}, ${chapterIndex}, ${topicIndex})">Delete</button>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        <textarea class="notes" placeholder="Add notes..." onblur="updateNotes(${subjectIndex}, ${chapterIndex}, this.value)">${chapter.notes}</textarea>
+                                        <button class="delete-chapter" onclick="deleteChapter(${subjectIndex}, ${chapterIndex})">Delete Chapter</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                tracker.appendChild(subjectDiv);
+            });
+        }
+
+        function toggleSubject(subjectIndex) {
+            subjects[subjectIndex].isOpen = !subjects[subjectIndex].isOpen;
+            saveToLocalStorage();
+            renderTracker();
+        }
+
+        function toggleChapter(subjectIndex, chapterIndex) {
+            subjects[subjectIndex].chapters[chapterIndex].isOpen = !subjects[subjectIndex].chapters[chapterIndex].isOpen;
+            subjects[subjectIndex].isOpen = true; // Ensure subject stays open
+            saveToLocalStorage();
+            renderTracker();
+        }
+
+        function addSubject() {
+            const input = document.getElementById('new-subject-name');
+            const name = input.value.trim();
+            if (name) {
+                subjects.push({ name, isOpen: false, chapters: [] });
+                input.value = ''; // Clear input
+                saveToLocalStorage();
+                renderTracker();
+            } else {
+                alert("Subject name cannot be empty!");
+            }
+        }
+
+        function deleteSubject(subjectIndex) {
+            subjects.splice(subjectIndex, 1);
+            saveToLocalStorage();
+            renderTracker();
+        }
+
+        function addChapter(subjectIndex) {
+            const input = document.getElementById(`new-chapter-${subjectIndex}`);
+            const name = input.value.trim();
+            if (name) {
+                subjects[subjectIndex].chapters.push({ name, topics: [], notes: "", isOpen: false });
+                subjects[subjectIndex].isOpen = true; // Ensure subject stays open
+                input.value = ''; // Clear input
+                saveToLocalStorage();
+                renderTracker();
+            } else {
+                alert("Chapter name cannot be empty!");
+            }
+        }
+
+        function deleteChapter(subjectIndex, chapterIndex) {
+            subjects[subjectIndex].chapters.splice(chapterIndex, 1);
+            subjects[subjectIndex].isOpen = true; // Ensure subject stays open
+            saveToLocalStorage();
+            renderTracker();
+        }
+
+        function addTopic(subjectIndex, chapterIndex) {
+            const input = document.getElementById(`new-topic-${subjectIndex}-${chapterIndex}`);
+            const name = input.value.trim();
+            if (name) {
+                subjects[subjectIndex].chapters[chapterIndex].topics.push({ name, completed: false });
+                subjects[subjectIndex].isOpen = true; // Ensure subject stays open
+                subjects[subjectIndex].chapters[chapterIndex].isOpen = true; // Ensure chapter stays open
+                input.value = ''; // Clear input
+                saveToLocalStorage();
+                renderTracker();
+            } else {
+                alert("Topic name cannot be empty!");
+            }
+        }
+
+        function deleteTopic(subjectIndex, chapterIndex, topicIndex) {
+            subjects[subjectIndex].chapters[chapterIndex].topics.splice(topicIndex, 1);
+            subjects[subjectIndex].isOpen = true; // Ensure subject stays open
+            subjects[subjectIndex].chapters[chapterIndex].isOpen = true; // Ensure chapter stays open
+            saveToLocalStorage();
+            renderTracker();
+        }
+
+        function updateTopic(subjectIndex, chapterIndex, topicIndex, value) {
+            subjects[subjectIndex].chapters[chapterIndex].topics[topicIndex].name = value.trim() || `Topic ${topicIndex + 1}`;
+            subjects[subjectIndex].isOpen = true; // Ensure subject stays open
+            subjects[subjectIndex].chapters[chapterIndex].isOpen = true; // Ensure chapter stays open
+            saveToLocalStorage();
+            renderTracker();
+        }
+
+        function updateNotes(subjectIndex, chapterIndex, value) {
+            subjects[subjectIndex].chapters[chapterIndex].notes = value;
+            subjects[subjectIndex].isOpen = true; // Ensure subject stays open
+            subjects[subjectIndex].chapters[chapterIndex].isOpen = true; // Ensure chapter stays open
+            saveToLocalStorage();
+            renderTracker();
+        }
+
+        function updateProgress(subjectIndex, chapterIndex, topicIndex, isChecked) {
+            subjects[subjectIndex].chapters[chapterIndex].topics[topicIndex].completed = isChecked;
+            subjects[subjectIndex].isOpen = true; // Ensure subject stays open
+            subjects[subjectIndex].chapters[chapterIndex].isOpen = true; // Ensure chapter stays open
+            const totalTopics = subjects[subjectIndex].chapters[chapterIndex].topics.length;
+            const completedTopics = subjects[subjectIndex].chapters[chapterIndex].topics.filter(topic => topic.completed).length;
+            const progress = totalTopics > 0 ? (completedTopics / totalTopics) * 100 : 0;
+            const subjectDiv = document.querySelectorAll('.subject')[subjectIndex];
+            const chapterDiv = subjectDiv.querySelectorAll('.chapter')[chapterIndex];
+            chapterDiv.querySelector('.progress span').textContent = `${progress.toFixed(0)}%`;
+            chapterDiv.querySelector('.progress-fill').style.width = `${progress}%`;
+            saveToLocalStorage();
+            renderTracker();
+        }
+
+        // Initial render
+        renderTracker();
+    </script>
+</body>
+</html>
